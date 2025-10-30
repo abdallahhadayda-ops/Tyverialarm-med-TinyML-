@@ -21,7 +21,7 @@ const int BUFFER_SIZE = 25;                          // Buffer size
 const int TRANSMIT_THRESHOLD = 20;                   // Transmit buffer after 20 samples
 
 // Server configuration
-IPAddress serverAddr = IPAddress(172, 20, 10, 3);
+IPAddress serverAddr = IPAddress( 10,112,7,107);
 int serverPort = 7123;
 
 TCPClient client;
@@ -228,7 +228,7 @@ SerialLogHandler logHandler;
 const unsigned long MAX_RECORDING_LENGTH_MS = 30000;
 
 // Server configuration
-IPAddress serverAddr = IPAddress(172, 20, 10, 3); // **UPDATE THIS**
+IPAddress serverAddr = IPAddress( 10,112,7,107); // **UPDATE THIS**
 int serverPort = 7123;
 
 TCPClient client;
