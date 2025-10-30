@@ -1,0 +1,92 @@
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const net = require('net');
+
+// Logging available IP addresses
+let addresses = [];
+const ifaces = os.networkInterfaces();
+Object.keys(ifaces).forEach(function (ifname) {
+    ifaces[ifname].forEach(function (iface) {
+        if ('IPv4' !== iface.family || iface.internal !== false) {
+            return;
+        }
+        console.log("Found address " + ifname + ": " + iface.address);
+        addresses.push(iface.address);
+    });
+});
+
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+const argv = yargs(hideBin(process.argv))
+    .option('port', {
+        alias: 'p',
+        type: 'number',
+        description: 'Port to listen on for incoming data',
+        default: 7123,
+    })
+    .option('label', {
+        alias: 'l',
+        type: 'string',
+        description: 'Optional label for output filenames',
+        default: null,
+    })
+    .help()
+    .alias('help', 'h')
+    .argv;
+
+const outputDir = path.join(__dirname, "out");
+const dataPort = argv.port;
+const label = argv.label;
+
+// Create the output directory if it does not exist
+try {
+    fs.mkdirSync(outputDir);
+} catch (e) {
+    // Directory exists
+}
+
+// Generate a unique file path
+let lastNum = 0;
+function getUniqueOutputPath() {
+    for (let i = lastNum + 1; i < 99999; i++) {
+        const filename = label
+            ? `${label}.${i.toString().padStart(5, '0')}.csv`
+            : `${i.toString().padStart(5, '0')}.csv`;
+
+        const outPath = path.join(outputDir, filename);
+        try {
+            fs.statSync(outPath); // Check if the file exists
+        } catch (e) {
+            // File does not exist, use this one
+            lastNum = i;
+            return outPath;
+        }
+    }
+    throw new Error("Exceeded maximum file numbering range");
+}
+
+// Start a TCP Server
+net.createServer(function (socket) {
+    console.log('Data connection started from ' + socket.remoteAddress);
+
+    // Generate a new file for this connection
+    const outPath = getUniqueOutputPath();
+    const writer = fs.createWriteStream(outPath);
+
+    // Write header for the CSV file
+    writer.write("timestamp,accX,accY,accZ\n");
+
+    socket.on('data', function (data) {
+        // Handle plain text CSV data
+        const textData = data.toString(); // Convert buffer to string
+        writer.write(textData); // Write to CSV
+    });
+
+    socket.on('end', function () {
+        console.log(`Transmission complete. Data saved to ${outPath}`);
+        writer.end(); // Close the writer
+    });
+}).listen(dataPort);
+
+console.log(`Server listening on port ${dataPort}`);
